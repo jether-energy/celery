@@ -513,7 +513,8 @@ class KeyValueStoreBackend(BaseBackend):
                     'retries': getattr(request, 'retries', None),
                     'queue': request.delivery_info.get(
                         'routing_key') if hasattr(request, 'delivery_info') and
-                                          request.delivery_info else None
+                                          request.delivery_info else None,
+                    'headers': getattr(request, 'headers', None),
                 }
                 meta.update(request_meta)
 
