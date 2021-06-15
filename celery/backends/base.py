@@ -502,6 +502,21 @@ class KeyValueStoreBackend(BaseBackend):
                       traceback=None, request=None, **kwargs):
         meta = {'status': status, 'result': result, 'traceback': traceback,
                 'children': self.current_task_children(request)}
+
+        if self.app.conf.find_value_for_key(name='RESULT_EXTENDED'):
+            if request:
+                request_meta = {
+                    'name': getattr(request, 'task_name', None) or getattr(request, 'task', None),
+                    'args': getattr(request, 'args', None),
+                    'kwargs': getattr(request, 'kwargs', None),
+                    'worker': getattr(request, 'hostname', None),
+                    'retries': getattr(request, 'retries', None),
+                    'queue': request.delivery_info.get(
+                        'routing_key') if hasattr(request, 'delivery_info') and
+                                          request.delivery_info else None
+                }
+                meta.update(request_meta)
+
         self.set(self.get_key_for_task(task_id), self.encode(meta))
         return result
 

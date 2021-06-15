@@ -12,6 +12,7 @@ from celery.result import (
     result_from_tuple,
 )
 from celery.utils import uuid
+from celery.app.task import Context
 from celery.utils.serialization import pickle
 
 from celery.tests.case import AppCase, Mock, depends_on_current_app, patch
@@ -255,6 +256,28 @@ class test_AsyncResult(AppCase):
         self.assertFalse(self.app.AsyncResult(self.task4['id']).ready())
 
         self.assertFalse(self.app.AsyncResult(uuid()).ready())
+
+    def test_get_request_meta(self):
+        x = self.app.AsyncResult('1')
+        request = Context(
+            task_name='foo',
+            children=None,
+            args=['one', 'two'],
+            kwargs={'kwarg1': 'three'},
+            hostname="foo",
+            retries=1,
+            delivery_info={'routing_key': 'celery'}
+        )
+        x.backend.store_result(task_id="1", result='foo', status=states.SUCCESS,
+                               traceback=None, request=request)
+        assert x.name == 'foo'
+        assert x.args == ['one', 'two']
+        assert x.kwargs == {'kwarg1': 'three'}
+        assert x.worker == 'foo'
+        assert x.retries == 1
+        assert x.queue == 'celery'
+        assert x.task_id == "1"
+        assert x.state == "SUCCESS"
 
 
 class test_ResultSet(AppCase):

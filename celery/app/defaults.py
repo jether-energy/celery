@@ -144,6 +144,7 @@ NAMESPACES = {
         'RESULT_ENGINE_OPTIONS': Option(type='dict'),
         'RESULT_EXCHANGE': Option('celeryresults'),
         'RESULT_EXCHANGE_TYPE': Option('direct'),
+        'RESULT_EXTENDED': Option(True, type='bool'),
         'RESULT_SERIALIZER': Option('pickle'),
         'RESULT_PERSISTENT': Option(None, type='bool'),
         'ROUTES': Option(type='any'),
