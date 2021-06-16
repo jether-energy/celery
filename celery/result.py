@@ -777,8 +777,9 @@ class GroupResult(ResultSet):
     #: List/iterator of results in the group
     results = None
 
-    def __init__(self, id=None, results=None, **kwargs):
+    def __init__(self, id=None, results=None, parent=None,  **kwargs):
         self.id = id
+        self.parent = parent
         ResultSet.__init__(self, results, **kwargs)
 
     def save(self, backend=None):
@@ -809,7 +810,12 @@ class GroupResult(ResultSet):
 
     def __eq__(self, other):
         if isinstance(other, GroupResult):
-            return other.id == self.id and other.results == self.results
+            return (other.id == self.id and
+                    other.results == self.results
+                    and other.parent == self.parent)
+        elif isinstance(other, string_t):
+            return other == self.id
+
         return NotImplemented
 
     def __ne__(self, other):
@@ -819,8 +825,18 @@ class GroupResult(ResultSet):
         return '<{0}: {1} [{2}]>'.format(type(self).__name__, self.id,
                                          ', '.join(r.id for r in self.results))
 
+    def __str__(self):
+        """`str(self) -> self.id`."""
+        return str(self.id)
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
     def as_tuple(self):
-        return self.id, [r.as_tuple() for r in self.results]
+        return (
+            (self.id, self.parent and self.parent.as_tuple()),
+            [r.as_tuple() for r in self.results]
+        )
     serializable = as_tuple   # XXX compat
 
     @property
@@ -931,20 +947,23 @@ class EagerResult(AsyncResult):
 
 
 def result_from_tuple(r, app=None):
+    """Deserialize result from tuple."""
     # earlier backends may just pickle, so check if
     # result is already prepared.
     app = app_or_default(app)
     Result = app.AsyncResult
     if not isinstance(r, ResultBase):
         res, nodes = r
-        if nodes:
-            return app.GroupResult(
-                res, [result_from_tuple(child, app) for child in nodes],
-            )
-        # previously did not include parent
         id, parent = res if isinstance(res, (list, tuple)) else (res, None)
         if parent:
             parent = result_from_tuple(parent, app)
+
+        if nodes is not None:
+            return app.GroupResult(
+                id, [result_from_tuple(child, app) for child in nodes],
+                parent=parent,
+            )
+
         return Result(id, parent=parent)
     return r
 from_serializable = result_from_tuple  # XXX compat
