@@ -515,6 +515,8 @@ class KeyValueStoreBackend(BaseBackend):
                         'routing_key') if hasattr(request, 'delivery_info') and
                                           request.delivery_info else None,
                     'headers': getattr(request, 'headers', None),
+                    'chord_id': getattr(request, 'chord', None) and
+                                request.chord['options'].get('task_id'),
                 }
                 meta.update(request_meta)
 

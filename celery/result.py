@@ -239,12 +239,16 @@ class AsyncResult(ResultBase):
 
     def iterdeps(self, intermediate=False):
         stack = deque([(None, self)])
-
+        visited = set()
         while stack:
             parent, node = stack.popleft()
             yield parent, node
-            if node.ready():
+            if node.ready() and node not in visited:
+                visited.add(node)
                 stack.extend((node, child) for child in node.children or [])
+                chord = getattr(node, 'chord_id', None)
+                if chord:
+                    stack.extend([(node, chord)])
             else:
                 if not intermediate:
                     raise IncompleteStream()
@@ -345,6 +349,10 @@ class AsyncResult(ResultBase):
             d['children'] = [
                 result_from_tuple(child, self.app) for child in children
             ]
+        chord_id = d.get('chord_id')
+        if chord_id:
+            d['chord_id'] = result_from_tuple((chord_id, None))
+
         self._cache = d
         return d
 
@@ -426,6 +434,11 @@ class AsyncResult(ResultBase):
     @property
     def queue(self):
         return self._get_task_meta().get('queue')
+
+    @property
+    def chord_id(self):
+        return self._get_task_meta().get('chord_id')
+
 
 BaseAsyncResult = AsyncResult  # for backwards compatibility.
 
