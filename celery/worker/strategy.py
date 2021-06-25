@@ -57,7 +57,8 @@ def default(task, app, consumer,
             return
 
         if _does_info:
-            info('Received task: %s', req)
+            info('Received task: %s, parent_task: %s', req,
+                 (body.get('headers') or {}).get('CELERY_PARENT_TASK'))
 
         if task_sends_events:
             send_event(
