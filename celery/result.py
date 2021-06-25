@@ -249,6 +249,9 @@ class AsyncResult(ResultBase):
                 chord = getattr(node, 'chord_id', None)
                 if chord:
                     stack.extend([(node, chord)])
+                parent_task = getattr(node, 'parent_task', None)
+                if parent_task:
+                    stack.extend([(parent_task, node)])
             else:
                 if not intermediate:
                     raise IncompleteStream()
@@ -353,6 +356,10 @@ class AsyncResult(ResultBase):
         if chord_id:
             d['chord_id'] = result_from_tuple((chord_id, None))
 
+        parent_task = d.get('parent_task')
+        if parent_task:
+            d['parent_task'] = result_from_tuple((parent_task, None))
+
         self._cache = d
         return d
 
@@ -438,6 +445,10 @@ class AsyncResult(ResultBase):
     @property
     def chord_id(self):
         return self._get_task_meta().get('chord_id')
+
+    @property
+    def parent_task(self):
+        return self._get_task_meta().get('parent_task')
 
 
 BaseAsyncResult = AsyncResult  # for backwards compatibility.

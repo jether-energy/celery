@@ -503,6 +503,8 @@ class KeyValueStoreBackend(BaseBackend):
         meta = {'status': status, 'result': result, 'traceback': traceback,
                 'children': self.current_task_children(request)}
 
+        headers = getattr(request, 'headers', None)
+        parent_task = (headers or {}).get('CELERY_PARENT_TASK')
         if self.app.conf.find_value_for_key(name='RESULT_EXTENDED'):
             if request:
                 request_meta = {
@@ -514,9 +516,10 @@ class KeyValueStoreBackend(BaseBackend):
                     'queue': request.delivery_info.get(
                         'routing_key') if hasattr(request, 'delivery_info') and
                                           request.delivery_info else None,
-                    'headers': getattr(request, 'headers', None),
+                    'headers': headers,
                     'chord_id': getattr(request, 'chord', None) and
                                 request.chord['options'].get('task_id'),
+                    'parent_task': parent_task,
                 }
                 meta.update(request_meta)
 
