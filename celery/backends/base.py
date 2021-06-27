@@ -504,7 +504,6 @@ class KeyValueStoreBackend(BaseBackend):
                 'children': self.current_task_children(request)}
 
         headers = getattr(request, 'headers', None)
-        parent_task = (headers or {}).get('CELERY_PARENT_TASK')
         if self.app.conf.find_value_for_key(name='RESULT_EXTENDED'):
             if request:
                 request_meta = {
@@ -519,8 +518,10 @@ class KeyValueStoreBackend(BaseBackend):
                     'headers': headers,
                     'chord_id': getattr(request, 'chord', None) and
                                 request.chord['options'].get('task_id'),
-                    'parent_task': parent_task,
                 }
+                parent_task = (headers or {}).get('CELERY_PARENT_TASK')
+                if parent_task:
+                    meta['parent_task'] = parent_task
                 meta.update(request_meta)
 
         self.set(self.get_key_for_task(task_id), self.encode(meta))
