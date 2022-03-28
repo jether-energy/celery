@@ -8,6 +8,17 @@ This document contains change notes for bugfix releases in the 3.1.x series
 (Cipater), please see :ref:`whatsnew-3.1` for an overview of what's
 new in Celery 3.1.
 
+.. _version-3.1.26-1-jer-2:
+
+3.1.26-1-jer2
+======
+:release-date: 2022-03-28 15:00 PM IST
+:release-by: Linar Savion
+
+- Backported reject_on_worker_lost option, extended it to be handled just like regular exceptions (max_retries, etc..)
+.. _version-3.1.26:
+
+
 .. _version-3.1.26-1-jer-1:
 
 3.1.26-1-jer1
