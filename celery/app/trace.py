@@ -84,11 +84,11 @@ class TraceInfo(object):
             FAILURE: self.handle_failure,
         }[self.state](task, store_errors=store_errors)
 
-    def handle_retry(self, task, store_errors=True):
+    def handle_retry(self, task, _request=None, store_errors=True):
         """Handle retry exception."""
         # the exception raised is the Retry semi-predicate,
         # and it's exc' attribute is the original exception raised (if any).
-        req = task.request
+        req = _request or task.request
         type_, _, tb = sys.exc_info()
         try:
             reason = self.retval

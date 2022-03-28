@@ -430,6 +430,27 @@ class Request(object):
             # time to write the result.
             if self.store_errors:
                 if isinstance(exc, WorkerLostError):
+                    # In case of reject_on_worker_lost, the task will be retried
+                    if getattr(self.task,'reject_on_worker_lost', False):
+                        # Local import because this is a hackish way to recreat the retry flow that
+                        # tasks normally call through trace_task
+                        from celery.states import RETRY
+                        from celery.app.trace import TraceInfo
+                        from celery.app.task import Context
+
+                        _task_request = Context(self.request_dict, args=self.args,
+                                               called_directly=False, kwargs=self.kwargs)
+                        try:
+                            retry_exc_info = self.task.retry(args=self.args, kwargs=self.kwargs, exc=exc,
+                                                             _request=_task_request, throw=False)
+                        except Exception as e:
+                            # Might fail due to max retries, in that case, proceed normally
+                            pass
+                        else:
+                            TraceInfo(RETRY, retry_exc_info).handle_retry(self.task, _request=_task_request)
+                            exc_info.exception = retry_exc_info
+                            return self.on_retry(exc_info)
+
                     self.task.backend.mark_as_failure(
                         self.id, exc, request=self,
                     )
