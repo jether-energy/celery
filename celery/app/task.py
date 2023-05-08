@@ -597,7 +597,7 @@ class Task(object):
         return self.subtask(args, kwargs, options, type=self, **extra_options)
 
     def retry(self, args=None, kwargs=None, exc=None, throw=True,
-              eta=None, countdown=None, max_retries=None, **options):
+              eta=None, countdown=None, max_retries=None, _request=None, **options):
         """Retry the task.
 
         :param args: Positional arguments to retry with.
@@ -659,7 +659,8 @@ class Task(object):
         to convey that the rest of the block will not be executed.
 
         """
-        request = self.request
+        # If retry was called with a custom request
+        request = _request or self.request
         retries = request.retries + 1
         max_retries = self.max_retries if max_retries is None else max_retries
 
