@@ -19,7 +19,7 @@ import datetime
 
 from collections import Callable
 from functools import partial, wraps
-from inspect import getfullargspec as getargspec
+from inspect import getfullargspec
 from pprint import pprint
 
 from kombu.entity import Exchange, Queue
@@ -197,8 +197,8 @@ def is_iterable(obj):
 
 def fun_takes_kwargs(fun, kwlist=[]):
     # deprecated
-    S = getattr(fun, 'argspec', getargspec(fun))
-    if S.keywords is not None:
+    S = getattr(fun, 'argspec', getfullargspec(fun))
+    if S.varkw is not None:
         return kwlist
     return [kw for kw in kwlist if kw in S.args]
 
