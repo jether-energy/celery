@@ -19,7 +19,7 @@ import datetime
 
 from collections import Callable
 from functools import partial, wraps
-from inspect import getargspec
+from inspect import getfullargspec as getargspec
 from pprint import pprint
 
 from kombu.entity import Exchange, Queue
