@@ -17,6 +17,21 @@ import traceback
 import warnings
 import datetime
 
+if sys.version_info >= (3, 10, 0):
+    # Workaround for fixing celery's dependency on collections.*
+    # when it should be collections.abc.*
+    from collections.abc import (Callable, Iterable, Mapping, MutableMapping,
+                                 MutableSet, MutableSequence, Hashable)
+    import collections
+
+    collections.Callable = Callable
+    collections.Iterable = Iterable
+    collections.Mapping = Mapping
+    collections.MutableMapping = MutableMapping
+    collections.MutableSet = MutableSet
+    collections.MutableSequence = MutableSequence
+    collections.Hashable = Hashable
+
 from collections import Callable
 from functools import partial, wraps
 from inspect import getfullargspec
