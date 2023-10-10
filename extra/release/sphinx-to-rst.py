@@ -7,7 +7,7 @@ import os
 import re
 import sys
 
-from collections import Callable
+from collections.abc import Callable
 from functools import partial
 
 SAY = partial(print, file=sys.stderr)

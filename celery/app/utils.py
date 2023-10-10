@@ -12,7 +12,7 @@ import os
 import platform as _platform
 import re
 
-from collections import Mapping
+from collections.abc import Mapping
 from types import ModuleType
 
 from kombu.utils.url import maybe_sanitize_url
