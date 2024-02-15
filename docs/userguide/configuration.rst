@@ -731,6 +731,10 @@ Can be one of the following:
     Use the `S3`_ to store the results
     See :ref:`conf-s3-result-backend`.
 
+* ``gcs``
+    Use the `GCS`_ to store the results
+    See :ref:`conf-gcs-result-backend`.
+
 .. warning:
 
     While the AMQP result backend is very efficient, you must make sure
@@ -750,6 +754,7 @@ Can be one of the following:
 .. _`Consul`: https://consul.io/
 .. _`AzureBlockBlob`: https://azure.microsoft.com/en-us/services/storage/blobs/
 .. _`S3`: https://aws.amazon.com/s3/
+.. _`GCS`: https://cloud.google.com/storage/
 
 
 .. setting:: result_backend_always_retry
@@ -1797,6 +1802,104 @@ Timeout in seconds for establishing the azure block blob connection.
 Default: 120.
 
 Timeout in seconds for reading of an azure block blob.
+
+.. _conf-gcs-result-backend:
+
+GCS backend settings
+-------------------
+
+.. note::
+
+    This gcs backend driver requires :pypi:`google-cloud-storage`.
+
+    To install, use :command:`gcs`:
+
+    .. code-block:: console
+
+        $ pip install celery[gcs]
+
+    See :ref:`bundles` for information on combining multiple extension
+    requirements.
+
+This backend requires the following configuration directives to be set.
+
+.. setting:: gcs_bucket
+
+``gcs_bucket``
+~~~~~~~~~~~~~~
+
+Default: None.
+
+The gcs bucket name. For example::
+
+    gcs_bucket = 'bucket_name'
+
+.. setting:: gcs_project
+
+``gcs_project``
+~~~~~~~~~~~~~~~
+
+Default: None.
+
+The gcs project name. For example::
+
+    gcs_project = 'test-project'
+
+.. setting:: gcs_base_path
+
+``gcs_base_path``
+~~~~~~~~~~~~~~~~~
+
+Default: /celery.
+
+A base path in the gcs bucket to use to store result keys. For example::
+
+    gcs_base_path = '/prefix'
+
+.. setting:: gcs_endpoint_url
+
+``gcs_ttl``
+~~~~~~~~~~~
+
+Default: 0.
+
+The time to live in seconds for the results blobs.
+Use it to automatically delete results from Cloud Storage Buckets.
+Requires a bucket with Object Lifecycle Management enabled.
+
+For example to auto remove results after 24 hours::
+
+    gcs_ttl = 86400
+
+.. setting:: gcs_connect_timeout
+
+``gcs_connect_timeout``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Default: 60.
+
+Sets the maximum time required to establish the connection to the server. For example::
+
+    gcs_connect_timeout = 60
+
+``gcs_read_timeout``
+~~~~~~~~~~~~~~~~~~~~
+
+Default: 60.
+
+Sets the maximum time to wait for a completed response. For example::
+
+    gcs_connect_timeout = 60
+
+Example configuration
+~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    gcs_bucket = 'mybucket'
+    gcs_project = 'myproject'
+    gcs_base_path = '/celery_result_backend'
+    gcs_ttl = 86400
 
 .. _conf-elasticsearch-result-backend:
 
@@ -2984,7 +3087,7 @@ prefetch count to its maximum allowable value following a connection loss to the
 broker. By default, this setting is enabled.
 
 Upon a connection loss, Celery will attempt to reconnect to the broker automatically,
-provided the :setting:`broker_connection_retry_on_startup` or :setting:`broker_connection_retry` 
+provided the :setting:`broker_connection_retry_on_startup` or :setting:`broker_connection_retry`
 is not set to False. During the period of lost connection, the message broker does not keep track
 of the number of tasks already fetched. Therefore, to manage the task load effectively and prevent
 overloading, Celery reduces the prefetch count based on the number of tasks that are
