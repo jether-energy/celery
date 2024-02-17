@@ -17,9 +17,6 @@ try:
 except ImportError:
     storage = None
 
-from urllib.parse import urlparse
-
-
 __all__ = ('GCSBackend',)
 
 
@@ -36,24 +33,21 @@ class GCSBackend(KeyValueStoreBackend):
             raise ImproperlyConfigured(
                 'You must install google-cloud-storage to use gcs backend'
             )
-        self._init_from_url()
-        self._client = None
+        conf = self.app.conf
 
-    def _init_from_url(self):
-        res = urlparse(self.url)
-        if res.scheme != 'gs':
+        self.bucket_name = conf.get('gcs_bucket')
+        if not self.bucket_name:
             raise ImproperlyConfigured(
-                f'Invalid result_backend URL: {self.url}'
+                'Missing bucket name: specify gcs_bucket to use gcs backend'
             )
-        self.bucket_name = res.netloc
-        self.base_path = res.path.strip('/')
-        params = dict(kv.split('=') for kv in res.query.split('?'))
-        if 'project' not in params:
+        self.project = conf.get('gcs_project')
+        if not self.project:
             raise ImproperlyConfigured(
-                'You must specify a project in the result_backend URI'
+                'Missing project:specify gcs_project to use gcs backend'
             )
-        self.project = params['project']
-        self.ttl = int(params.get('ttl', 0))
+        self.base_path = conf.get('gcs_base_path', '').strip('/')
+        self.ttl = int(conf.get('gcs_ttl', 0))
+        self._client = None
 
     def get(self, key):
         key = bytes_to_str(key)
