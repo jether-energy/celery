@@ -47,7 +47,11 @@ class GCSBackend(KeyValueStoreBackend):
                 'Missing project:specify gcs_project to use gcs backend'
             )
         self.base_path = conf.get('gcs_base_path', '').strip('/')
-        self.ttl = int(conf.get('gcs_ttl', 0))
+        self.ttl = int(conf.get('gcs_ttl') or 0)
+        if self.ttl < 0:
+            raise ImproperlyConfigured(
+                'Invalid ttl:gcs_ttl must be greater than or equal to 0'
+            )
         self._client = None
 
     def get(self, key):
