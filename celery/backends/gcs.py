@@ -1,21 +1,19 @@
 """Google Cloud Storage result store backend for Celery."""
-import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from os import getpid
 from threading import RLock
 
-import requests
-
 from celery.exceptions import ImproperlyConfigured
-from kombu.utils import cached_property
 from kombu.utils.encoding import bytes_to_str
 from .base import KeyValueStoreBackend
 
 try:
+    import requests
     from google.cloud import storage
+    from google.cloud.storage.retry import DEFAULT_RETRY
     from google.api_core.retry import Retry
     from google.cloud.storage import Client
-    from google.cloud.storage.constants import _DEFAULT_TIMEOUT
 except ImportError:
     storage = None
 
@@ -25,11 +23,12 @@ __all__ = ('GCSBackend',)
 class GCSBackend(KeyValueStoreBackend):
     """Google Cloud Storage task result backend."""
 
-    _lock = RLock()
-    _my_pid = os.getpid()
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self._lock = RLock()
+        self._pid = getpid()
+        self._retry_policy = DEFAULT_RETRY
+        self._client = None
 
         if not storage:
             raise ImproperlyConfigured(
@@ -48,23 +47,24 @@ class GCSBackend(KeyValueStoreBackend):
                 'Missing project:specify gcs_project to use gcs backend'
             )
         self.base_path = conf.get('gcs_base_path', '').strip('/')
+        self._threadpool_maxsize = conf.get('gcs_threadpool_maxsize', 10)
         self.ttl = float(conf.get('gcs_ttl') or 0)
         if self.ttl < 0:
             raise ImproperlyConfigured(
-                'Invalid ttl:gcs_ttl must be greater than or equal to 0'
+                f'Invalid ttl: {self.ttl} must be greater than or equal to 0'
             )
-
-        self._connect_timeout = conf.get(
-            'gcs_connect_timeout', _DEFAULT_TIMEOUT
-        )
-        self._read_timeout = conf.get('gcs_read_timeout', _DEFAULT_TIMEOUT)
-        self._client = None
+        elif self.ttl:
+            if not self._is_bucket_lifecycle_rule_exists():
+                raise ImproperlyConfigured(
+                    f'Missing lifecycle rule to use gcs backend with ttl on '
+                    f'bucket: {self.bucket_name}'
+                )
 
     def get(self, key):
         key = bytes_to_str(key)
         blob = self._get_blob(key)
         try:
-            return blob.download_as_bytes()
+            return blob.download_as_bytes(retry=self._retry_policy)
         except storage.blob.NotFound:
             return None
 
@@ -73,13 +73,13 @@ class GCSBackend(KeyValueStoreBackend):
         blob = self._get_blob(key)
         if self.ttl:
             blob.custom_time = datetime.utcnow() + timedelta(seconds=self.ttl)
-        Retry()(blob.upload_from_string)(value)
+        blob.upload_from_string(value, retry=self._retry_policy)
 
     def delete(self, key):
         key = bytes_to_str(key)
         blob = self._get_blob(key)
         if blob.exists():
-            Retry()(blob.delete)()
+            blob.delete(retry=self._retry_policy)
 
     def mget(self, keys):
         with ThreadPoolExecutor() as pool:
@@ -89,31 +89,38 @@ class GCSBackend(KeyValueStoreBackend):
     def client(self):
         """Returns a storage client."""
 
-        if self._client:
-            return self._client
-
         # make sure it's thread-safe, as creating a new client is expensive
         with self._lock:
-            if self._client and self._my_pid == os.getpid():
+            if self._client and self._pid == getpid():
                 return self._client
-            # Make sure each process gets its own connection after a fork
+            # make sure each process gets its own connection after a fork
             self._client = Client(project=self.project)
-            self._my_pid = os.getpid()
+            self._pid = getpid()
 
-            # Increase the number of connections to the server
+            # config the number of connections to the server
             adapter = requests.adapters.HTTPAdapter(
-                pool_connections=128, pool_maxsize=128, max_retries=3
+                pool_connections=self._threadpool_maxsize,
+                pool_maxsize=self._threadpool_maxsize,
+                max_retries=3,
             )
-            self._client._http.mount("https://", adapter)
-            self._client._http._auth_request.session.mount("https://", adapter)
+            client_http = self._client._http
+            client_http.mount("https://", adapter)
+            client_http._auth_request.session.mount("https://", adapter)
 
             return self._client
 
-    @cached_property
+    @property
     def bucket(self):
-        timeout = (self._connect_timeout, self._read_timeout)
-        return self.client.get_bucket(self.bucket_name, timeout=timeout)
+        return self.client.bucket(self.bucket_name)
 
     def _get_blob(self, key):
         key_bucket_path = f'{self.base_path}/{key}' if self.base_path else key
         return self.bucket.blob(key_bucket_path)
+
+    def _is_bucket_lifecycle_rule_exists(self):
+        bucket = self.bucket
+        bucket.reload()
+        for rule in bucket.lifecycle_rules:
+            if rule['action']['type'] == 'Delete':
+                return True
+        return False

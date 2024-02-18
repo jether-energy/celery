@@ -1,3 +1,4 @@
+from datetime import timedelta, datetime
 from unittest.mock import patch, Mock, call
 
 import pytest
@@ -40,6 +41,17 @@ class test_GCSBackend:
         with pytest.raises(ImproperlyConfigured, match='Invalid ttl'):
             GCSBackend(app=self.app)
 
+    @patch.object(GCSBackend, '_is_bucket_lifecycle_rule_exists')
+    def test_ttl_missing_lifecycle_rule(self, mock_lifecycle):
+        self.app.conf.gcs_ttl = 86400
+
+        mock_lifecycle.return_value = False
+        with pytest.raises(
+            ImproperlyConfigured, match='Missing lifecycle rule'
+        ):
+            GCSBackend(app=self.app)
+            mock_lifecycle.assert_called_once()
+
     @patch.object(GCSBackend, '_get_blob')
     def test_get_key(self, mock_get_blob, base_path):
         self.app.conf.gcs_base_path = base_path
@@ -52,19 +64,23 @@ class test_GCSBackend:
         mock_get_blob.assert_called_once_with('testkey1')
         mock_blob.download_as_bytes.assert_called_once()
 
+    @patch.object(GCSBackend, 'bucket')
     @patch.object(GCSBackend, '_get_blob')
-    def test_set_key(self, mock_get_blob, base_path, ttl):
+    def test_set_key(self, mock_get_blob, mock_bucket_prop, base_path, ttl):
         self.app.conf.gcs_base_path = base_path
         self.app.conf.gcs_ttl = ttl
 
         mock_blob = Mock()
         mock_get_blob.return_value = mock_blob
+        mock_bucket_prop.lifecycle_rules = [{'action': {'type': 'Delete'}}]
         backend = GCSBackend(app=self.app)
-        backend.set('testkey', 'test-value')
+        backend.set('testkey', 'testvalue')
         mock_get_blob.assert_called_once_with('testkey')
-        mock_blob.upload_from_string.assert_called_once_with('test-value')
+        mock_blob.upload_from_string.assert_called_once_with(
+            'testvalue', retry=backend._retry_policy
+        )
         if ttl:
-            assert mock_blob.custom_time is not None
+            assert mock_blob.custom_time >= datetime.utcnow()
 
     @patch.object(GCSBackend, '_get_blob')
     def test_get_missing_key(self, mock_get_blob):

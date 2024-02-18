@@ -1850,7 +1850,7 @@ The gcs project name. For example::
 ``gcs_base_path``
 ~~~~~~~~~~~~~~~~~
 
-Default: /celery.
+Default: None.
 
 A base path in the gcs bucket to use to store result keys. For example::
 
@@ -1864,32 +1864,12 @@ A base path in the gcs bucket to use to store result keys. For example::
 Default: 0.
 
 The time to live in seconds for the results blobs.
+Requires a GCS bucket with "Delete" Object Lifecycle Management action enabled.
 Use it to automatically delete results from Cloud Storage Buckets.
-Requires a bucket with Object Lifecycle Management enabled.
 
 For example to auto remove results after 24 hours::
 
     gcs_ttl = 86400
-
-.. setting:: gcs_connect_timeout
-
-``gcs_connect_timeout``
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Default: 60.
-
-Sets the maximum time required to establish the connection to the server. For example::
-
-    gcs_connect_timeout = 60
-
-``gcs_read_timeout``
-~~~~~~~~~~~~~~~~~~~~
-
-Default: 60.
-
-Sets the maximum time to wait for a completed response. For example::
-
-    gcs_connect_timeout = 60
 
 Example configuration
 ~~~~~~~~~~~~~~~~~~~~~
