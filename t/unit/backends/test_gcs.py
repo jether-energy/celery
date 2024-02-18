@@ -41,7 +41,7 @@ class test_GCSBackend:
             GCSBackend(app=self.app)
 
     @patch.object(GCSBackend, '_get_blob')
-    def test_get_a_key(self, mock_get_blob, base_path):
+    def test_get_key(self, mock_get_blob, base_path):
         self.app.conf.gcs_base_path = base_path
 
         mock_blob = Mock()
@@ -53,7 +53,7 @@ class test_GCSBackend:
         mock_blob.download_as_bytes.assert_called_once()
 
     @patch.object(GCSBackend, '_get_blob')
-    def test_set_a_key(self, mock_get_blob, base_path, ttl):
+    def test_set_key(self, mock_get_blob, base_path, ttl):
         self.app.conf.gcs_base_path = base_path
         self.app.conf.gcs_ttl = ttl
 
@@ -67,7 +67,7 @@ class test_GCSBackend:
             assert mock_blob.custom_time is not None
 
     @patch.object(GCSBackend, '_get_blob')
-    def test_get_a_missing_key(self, mock_get_blob):
+    def test_get_missing_key(self, mock_get_blob):
         self.app.conf.gcs_bucket = 'bucket'
         self.app.conf.gcs_project = 'project'
 
@@ -81,7 +81,7 @@ class test_GCSBackend:
         assert result is None
 
     @patch.object(GCSBackend, '_get_blob')
-    def test_delete_an_existing_key(self, mock_get_blob, base_path):
+    def test_delete_existing_key(self, mock_get_blob, base_path):
         self.app.conf.gcs_base_path = base_path
 
         mock_blob = Mock()
@@ -93,6 +93,20 @@ class test_GCSBackend:
         mock_get_blob.assert_called_once_with('testkey2')
         mock_blob.exists.assert_called_once()
         mock_blob.delete.assert_called_once()
+
+    @patch.object(GCSBackend, '_get_blob')
+    def test_delete_missing_key(self, mock_get_blob, base_path):
+        self.app.conf.gcs_base_path = base_path
+
+        mock_blob = Mock()
+        mock_get_blob.return_value = mock_blob
+        mock_blob.exists.return_value = False
+        backend = GCSBackend(app=self.app)
+        backend.delete(b"testkey2")
+
+        mock_get_blob.assert_called_once_with('testkey2')
+        mock_blob.exists.assert_called_once()
+        mock_blob.delete.assert_not_called()
 
     def test_mget(self):
         ...
