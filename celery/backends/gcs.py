@@ -14,6 +14,7 @@ from .base import KeyValueStoreBackend
 try:
     from google.cloud import storage
     from google.api_core.retry import Retry
+    from google.cloud.storage import Client
 except ImportError:
     storage = None
 
@@ -86,7 +87,7 @@ class GCSBackend(KeyValueStoreBackend):
             if self._client and self._my_pid == os.getpid():
                 return self._client
             # Make sure each process gets its own connection after a fork
-            self._client = storage.Client(project=self.project)
+            self._client = Client(project=self.project)
             self._my_pid = os.getpid()
 
             # Increase the number of connections to the server
