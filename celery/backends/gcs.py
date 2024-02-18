@@ -15,6 +15,7 @@ try:
     from google.cloud import storage
     from google.api_core.retry import Retry
     from google.cloud.storage import Client
+    from google.cloud.storage.constants import _DEFAULT_TIMEOUT
 except ImportError:
     storage = None
 
@@ -47,11 +48,16 @@ class GCSBackend(KeyValueStoreBackend):
                 'Missing project:specify gcs_project to use gcs backend'
             )
         self.base_path = conf.get('gcs_base_path', '').strip('/')
-        self.ttl = int(conf.get('gcs_ttl') or 0)
+        self.ttl = float(conf.get('gcs_ttl') or 0)
         if self.ttl < 0:
             raise ImproperlyConfigured(
                 'Invalid ttl:gcs_ttl must be greater than or equal to 0'
             )
+
+        self._connect_timeout = conf.get(
+            'gcs_connect_timeout', _DEFAULT_TIMEOUT
+        )
+        self._read_timeout = conf.get('gcs_read_timeout', _DEFAULT_TIMEOUT)
         self._client = None
 
     def get(self, key):
@@ -105,7 +111,8 @@ class GCSBackend(KeyValueStoreBackend):
 
     @cached_property
     def bucket(self):
-        return storage.bucket.Bucket(client=self.client, name=self.bucket_name)
+        timeout = (self._connect_timeout, self._read_timeout)
+        return self.client.get_bucket(self.bucket_name, timeout=timeout)
 
     def _get_blob(self, key):
         key_bucket_path = f'{self.base_path}/{key}' if self.base_path else key
