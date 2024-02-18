@@ -1,4 +1,4 @@
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, call
 
 import pytest
 from google.cloud.exceptions import NotFound
@@ -108,66 +108,11 @@ class test_GCSBackend:
         mock_blob.exists.assert_called_once()
         mock_blob.delete.assert_not_called()
 
-    def test_mget(self):
-        ...
-
-    #
-    # @patch('celery.backends.gcs.boto3')
-    # def test_with_error_while_getting_key(self, mock_boto3):
-    #     error = ClientError(
-    #         {'Error': {'Code': '403', 'Message': 'Permission denied'}}, 'error'
-    #     )
-    #     mock_boto3.Session().resource().Object().load.side_effect = error
-    #
-    #     self.app.conf.gcs_access_key_id = 'somekeyid'
-    #     self.app.conf.gcs_secret_access_key = 'somesecret'
-    #     self.app.conf.gcs_bucket = 'bucket'
-    #
-    #     gcs_backend = GCSBackend(app=self.app)
-    #
-    #     with pytest.raises(ClientError):
-    #         gcs_backend.get('uuidddd')
-    #
-    # @pytest.mark.parametrize("key", ['uuid', b'uuid'])
-    # @mock_gcs
-    # def test_delete_a_key(self, key):
-    #     self._mock_gcs_resource()
-    #
-    #     self.app.conf.gcs_access_key_id = 'somekeyid'
-    #     self.app.conf.gcs_secret_access_key = 'somesecret'
-    #     self.app.conf.gcs_bucket = 'bucket'
-    #
-    #     gcs_backend = GCSBackend(app=self.app)
-    #     gcs_backend._set_with_state(key, 'another_status', states.SUCCESS)
-    #     assert gcs_backend.get(key) == 'another_status'
-    #
-    #     gcs_backend.delete(key)
-    #
-    #     assert gcs_backend.get(key) is None
-    #
-    # @mock_gcs
-    # def test_with_a_non_existing_bucket(self):
-    #     self._mock_gcs_resource()
-    #
-    #     self.app.conf.gcs_access_key_id = 'somekeyid'
-    #     self.app.conf.gcs_secret_access_key = 'somesecret'
-    #     self.app.conf.gcs_bucket = 'bucket_not_exists'
-    #
-    #     gcs_backend = GCSBackend(app=self.app)
-    #
-    #     with pytest.raises(
-    #         ClientError, match=r'.*The specified bucket does not exist'
-    #     ):
-    #         gcs_backend._set_with_state(
-    #             'uuid', 'another_status', states.SUCCESS
-    #         )
-    #
-    # def _mock_gcs_resource(self):
-    #     # Create AWS gcs Bucket for moto.
-    #     session = boto3.Session(
-    #         gcp_access_key_id='moto_key_id',
-    #         gcp_secret_access_key='moto_secret_key',
-    #         region_name='us-east-1',
-    #     )
-    #     gcs = session.resource('gcs')
-    #     gcs.create_bucket(Bucket='bucket')
+    @patch.object(GCSBackend, 'get')
+    def test_mget(self, mock_get, base_path):
+        self.app.conf.gcs_base_path = base_path
+        backend = GCSBackend(app=self.app)
+        mock_get.side_effect = ['value1', 'value2']
+        result = backend.mget([b'key1', b'key2'])
+        mock_get.assert_has_calls([call(b'key1'), call(b'key2')])
+        assert result == ['value1', 'value2']
