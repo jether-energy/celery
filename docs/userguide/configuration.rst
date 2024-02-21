@@ -1821,7 +1821,11 @@ GCS backend settings
     See :ref:`bundles` for information on combining multiple extension
     requirements.
 
-This backend requires the following configuration directives to be set.
+GCS could be configured via the URL provided in :setting:`result_backend`, for example::
+
+    result_backend = 'gcs://mybucket/some-prefix?project=myproject&ttl=600'
+
+This backend requires the following configuration directives to be set:
 
 .. setting:: gcs_bucket
 
@@ -1852,7 +1856,7 @@ The gcs project name. For example::
 
 Default: None.
 
-A base path in the gcs bucket to use to store result keys. For example::
+A base path in the gcs bucket to use to store all result keys. For example::
 
     gcs_base_path = '/prefix'
 
@@ -1870,6 +1874,16 @@ Use it to automatically delete results from Cloud Storage Buckets.
 For example to auto remove results after 24 hours::
 
     gcs_ttl = 86400
+
+``gcs_threadpool_maxsize``
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Default: 10.
+
+Threadpool size for GCS operations. Same value defines the connection pool size.
+Allows to control the number of concurrent operations. For example::
+
+    gcs_threadpool_maxsize = 20
 
 Example configuration
 ~~~~~~~~~~~~~~~~~~~~~
