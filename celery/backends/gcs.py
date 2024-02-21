@@ -6,6 +6,8 @@ from threading import RLock
 
 from celery.exceptions import ImproperlyConfigured
 from kombu.utils.encoding import bytes_to_str
+from kombu.utils.functional import dictfilter
+from kombu.utils.url import url_to_parts
 from .base import KeyValueStoreBackend
 
 try:
@@ -35,6 +37,9 @@ class GCSBackend(KeyValueStoreBackend):
                 'You must install google-cloud-storage to use gcs backend'
             )
         conf = self.app.conf
+        if self.url:
+            url_params = self._params_from_url()
+            conf.update(**dictfilter(url_params))
 
         self.bucket_name = conf.get('gcs_bucket')
         if not self.bucket_name:
@@ -47,7 +52,7 @@ class GCSBackend(KeyValueStoreBackend):
                 'Missing project:specify gcs_project to use gcs backend'
             )
         self.base_path = conf.get('gcs_base_path', '').strip('/')
-        self._threadpool_maxsize = conf.get('gcs_threadpool_maxsize', 10)
+        self._threadpool_maxsize = int(conf.get('gcs_threadpool_maxsize', 10))
         self.ttl = float(conf.get('gcs_ttl') or 0)
         if self.ttl < 0:
             raise ImproperlyConfigured(
@@ -124,3 +129,12 @@ class GCSBackend(KeyValueStoreBackend):
             if rule['action']['type'] == 'Delete':
                 return True
         return False
+
+    def _params_from_url(self):
+        url_parts = url_to_parts(self.url)
+
+        return {
+            'gcs_bucket': url_parts.hostname,
+            'gcs_base_path': url_parts.path,
+            **url_parts.query,
+        }
