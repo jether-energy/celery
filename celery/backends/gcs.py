@@ -14,7 +14,6 @@ try:
     import requests
     from google.cloud import storage
     from google.cloud.storage.retry import DEFAULT_RETRY
-    from google.api_core.retry import Retry
     from google.cloud.storage import Client
 except ImportError:
     storage = None
