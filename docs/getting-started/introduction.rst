@@ -135,6 +135,7 @@ Celery is…
             - memcached, MongoDB
             - SQLAlchemy, Django ORM
             - Apache Cassandra
+            - Google Cloud Storage
 
         - **Serialization**
 

@@ -105,6 +105,10 @@ Transports and Backends
 :celery[slmq]:
     for using the SoftLayer Message Queue transport (*experimental*).
 
+:``celery[gcs]``:
+    for using the Google Cloud Storage as a result backend (*experimental*).
+
+
 .. _celery-installing-from-source:
 
 Downloading and installing from source

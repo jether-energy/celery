@@ -292,6 +292,9 @@ Transports and Backends
 :celery[couchbase]:
     for using CouchBase as a result backend.
 
+:``celery[gcs]``:
+    for using Google Cloud Storage as a result backend.
+
 :celery[beanstalk]:
     for using Beanstalk as a message transport (*experimental*).
 

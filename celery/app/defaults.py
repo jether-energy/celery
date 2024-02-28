@@ -100,6 +100,12 @@ NAMESPACES = {
         'SERVERS': Option(type='list'),
         'WRITE_CONSISTENCY': Option(type='string'),
     },
+    'GCS': {
+        'BUCKET': Option(type='string'),
+        'PROJECT': Option(type='string'),
+        'BASE_PATH': Option('', type='string'),
+        'TTL': Option(0, type='float'),
+    },
     'CELERY': {
         'ACCEPT_CONTENT': Option(DEFAULT_ACCEPT_CONTENT, type='list'),
         'ACKS_LATE': Option(False, type='bool'),

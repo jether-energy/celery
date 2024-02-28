@@ -225,6 +225,10 @@ Can be one of the following:
     Older AMQP backend (badly) emulating a database-based backend.
     See :ref:`conf-amqp-result-backend`.
 
+* ``gcs``
+    Use the `GCS`_ to store the results
+    See :ref:`conf-gcs-result-backend`.
+
 .. warning:
 
     While the AMQP result backend is very efficient, you must make sure
@@ -237,6 +241,7 @@ Can be one of the following:
 .. _`Cassandra`: http://cassandra.apache.org/
 .. _`IronCache`: http://www.iron.io/cache
 .. _`Couchbase`: http://www.couchbase.com/
+.. _`GCS`: https://cloud.google.com/storage/
 
 
 .. setting:: CELERY_RESULT_SERIALIZER
