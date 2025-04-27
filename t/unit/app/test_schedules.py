@@ -8,7 +8,7 @@ from unittest.mock import Mock
 import pytest
 import pytz
 
-from celery.schedules import ParseException, crontab, crontab_parser, schedule, solar
+from celery.schedules import ParseException, crontab, crontab_parser, schedule
 
 assertions = TestCase('__init__')
 
@@ -21,65 +21,6 @@ def patch_crontab_nowfun(cls, retval):
         yield
     finally:
         cls.nowfun = prev_nowfun
-
-
-class test_solar:
-
-    def setup_method(self):
-        pytest.importorskip('ephem')
-        self.s = solar('sunrise', 60, 30, app=self.app)
-
-    def test_reduce(self):
-        fun, args = self.s.__reduce__()
-        assert fun(*args) == self.s
-
-    def test_eq(self):
-        assert self.s == solar('sunrise', 60, 30, app=self.app)
-        assert self.s != solar('sunset', 60, 30, app=self.app)
-        assert self.s != schedule(10)
-
-    def test_repr(self):
-        assert repr(self.s)
-
-    def test_is_due(self):
-        self.s.remaining_estimate = Mock(name='rem')
-        self.s.remaining_estimate.return_value = timedelta(seconds=0)
-        assert self.s.is_due(datetime.utcnow()).is_due
-
-    def test_is_due__not_due(self):
-        self.s.remaining_estimate = Mock(name='rem')
-        self.s.remaining_estimate.return_value = timedelta(hours=10)
-        assert not self.s.is_due(datetime.utcnow()).is_due
-
-    def test_remaining_estimate(self):
-        self.s.cal = Mock(name='cal')
-        self.s.cal.next_rising().datetime.return_value = datetime.utcnow()
-        self.s.remaining_estimate(datetime.utcnow())
-
-    def test_coordinates(self):
-        with pytest.raises(ValueError):
-            solar('sunrise', -120, 60, app=self.app)
-        with pytest.raises(ValueError):
-            solar('sunrise', 120, 60, app=self.app)
-        with pytest.raises(ValueError):
-            solar('sunrise', 60, -200, app=self.app)
-        with pytest.raises(ValueError):
-            solar('sunrise', 60, 200, app=self.app)
-
-    def test_invalid_event(self):
-        with pytest.raises(ValueError):
-            solar('asdqwewqew', 60, 60, app=self.app)
-
-    def test_event_uses_center(self):
-        s = solar('solar_noon', 60, 60, app=self.app)
-        for ev, is_center in s._use_center_l.items():
-            s.method = s._methods[ev]
-            s.is_center = s._use_center_l[ev]
-            try:
-                s.remaining_estimate(datetime.utcnow())
-            except TypeError:
-                pytest.fail(f"{s.method} was called with 'use_center' which is not a "
-                            "valid keyword for the function.")
 
 
 class test_schedule:
