@@ -166,11 +166,6 @@ class schedule(BaseSchedule):
             return schedstate(is_due=True, next=self.seconds)
         return schedstate(is_due=False, next=remaining_s)
 
-    def maybe_make_aware(self, dt):
-        if self.utc_enabled:
-            return maybe_make_aware(dt, self.tz)
-        return dt
-
     def __repr__(self):
         return '<freq: {0.human_seconds}>'.format(self)
 
