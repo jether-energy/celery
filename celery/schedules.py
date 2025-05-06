@@ -56,7 +56,52 @@ class ParseException(Exception):
     """Raised by crontab_parser when the input can't be parsed."""
 
 
-class schedule(object):
+class BaseSchedule:
+
+    def __init__(self, nowfun=None, app=None):
+        self.nowfun = nowfun
+        self._app = app
+
+    def now(self):
+        return (self.nowfun or self.app.now)()
+
+    def remaining_estimate(self, last_run_at):
+        raise NotImplementedError()
+
+    def is_due(self, last_run_at):
+        raise NotImplementedError()
+
+    def maybe_make_aware(self, dt, naive_as_utc=True):
+        return maybe_make_aware(dt, self.tz, naive_as_utc=naive_as_utc)
+
+    @property
+    def app(self):
+        return self._app or current_app._get_current_object()
+
+    @app.setter
+    def app(self, app):
+        self._app = app
+
+    @cached_property
+    def tz(self):
+        return self.app.timezone
+
+    @cached_property
+    def utc_enabled(self):
+        return self.app.conf.enable_utc
+
+    def to_local(self, dt):
+        if not self.utc_enabled:
+            return timezone.to_local_fallback(dt)
+        return dt
+
+    def __eq__(self, other):
+        if isinstance(other, BaseSchedule):
+            return other.nowfun == self.nowfun
+        return NotImplemented
+
+
+class schedule(BaseSchedule):
     """Schedule for periodic task.
 
     :param run_every: Interval in seconds (or a :class:`~datetime.timedelta`).
@@ -120,11 +165,6 @@ class schedule(object):
         if remaining_s == 0:
             return schedstate(is_due=True, next=self.seconds)
         return schedstate(is_due=False, next=remaining_s)
-
-    def maybe_make_aware(self, dt):
-        if self.utc_enabled:
-            return maybe_make_aware(dt, self.tz)
-        return dt
 
     def __repr__(self):
         return '<freq: {0.human_seconds}>'.format(self)
@@ -440,15 +480,19 @@ class crontab(schedule):
                 return True
             return False
 
+        def is_before_last_run(year, month, day):
+            return self.maybe_make_aware(datetime(year, month, day, next_hour, next_minute),
+                                         naive_as_utc=False) < last_run_at
+
         def roll_over():
             while 1:
                 flag = (datedata.dom == len(days_of_month) or
                         day_out_of_range(datedata.year,
                                          months_of_year[datedata.moy],
                                          days_of_month[datedata.dom]) or
-                        (self.maybe_make_aware(datetime(datedata.year,
-                         months_of_year[datedata.moy],
-                         days_of_month[datedata.dom])) < last_run_at))
+                        (is_before_last_run(datedata.year,
+                                            months_of_year[datedata.moy],
+                                            days_of_month[datedata.dom])))
 
                 if flag:
                     datedata.dom = 0
