@@ -119,7 +119,7 @@ class GCSBackend(KeyValueStoreBackend):
             blob.delete(retry=self._retry_policy)
 
     def mget(self, keys):
-        with ThreadPoolExecutor() as pool:
+        with ThreadPoolExecutor(self._threadpool_maxsize) as pool:
             return list(pool.map(self.get, keys))
 
     @property
