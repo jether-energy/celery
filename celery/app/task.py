@@ -591,9 +591,14 @@ class Task(object):
             'reply_to': request.reply_to,
             'headers': request.headers,
         }
-        options.update(
-            {'queue': queue} if queue else (request.delivery_info or {})
-        )
+        if queue:
+            options['queue'] = queue
+        else:
+            delivery_info = request.delivery_info or {}
+            routing_key = delivery_info.get('routing_key')
+            options['queue'] = routing_key
+            options.update(delivery_info)
+
         return self.subtask(args, kwargs, options, type=self, **extra_options)
 
     def retry(self, args=None, kwargs=None, exc=None, throw=True,
