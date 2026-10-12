@@ -449,6 +449,7 @@ class Consumer(object):
 
         """
         task = self.app.tasks[name]
+        self.task_buckets[name] = self.bucket_for_task(task)
         self.strategies[name] = task.start_strategy(self.app, self)
         task.__trace__ = build_tracer(name, task, self.app.loader,
                                       self.hostname, app=self.app)

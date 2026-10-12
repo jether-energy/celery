@@ -351,7 +351,8 @@ def _fast_trace_task(task, uuid, args, kwargs, request={}):
         # registered after the pool forked, so the parent's
         # update_strategies never built its tracer in this process
         task_obj.__trace__ = build_tracer(
-            task, task_obj, task_obj.app.loader, app=task_obj.app,
+            task, task_obj, task_obj.app.loader, request.get('hostname'),
+            app=task_obj.app,
         )
     return task_obj.__trace__(uuid, args, kwargs, request)[0]
 

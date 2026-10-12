@@ -299,7 +299,7 @@ class test_Consumer(AppCase):
         l.event_dispatcher = mock_event_dispatcher()
         l.update_strategies()
 
-        @self.app.task(shared=False)
+        @self.app.task(shared=False, rate_limit='10/s')
         def late_task(x):
             return x * 2
 
@@ -311,6 +311,7 @@ class test_Consumer(AppCase):
         self.assertEqual(in_bucket.name, late_task.name)
         self.assertEqual(in_bucket.execute(), 42)
         self.assertIn(late_task.name, l.strategies)
+        self.assertIsNotNone(l.task_buckets[late_task.name])
 
     @patch('celery.worker.consumer.error')
     def test_receive_message_task_never_registered(self, error):

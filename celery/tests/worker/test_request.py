@@ -690,9 +690,15 @@ class test_Request(AppCase):
         setup_worker_optimizations(self.app)
         try:
             self.mytask.__trace__ = None
-            res = trace.trace_task_ret(self.mytask.name, uuid(), [4], {})
+            with patch('celery.app.trace.build_tracer',
+                       wraps=build_tracer) as tracer:
+                res = trace.trace_task_ret(
+                    self.mytask.name, uuid(), [4], {},
+                    {'hostname': 'worker@host'},
+                )
             self.assertEqual(res, 4 ** 4)
             self.assertIsNotNone(self.mytask.__trace__)
+            self.assertEqual(tracer.call_args[0][3], 'worker@host')
         finally:
             reset_worker_optimizations()
             delattr(self.mytask, '__trace__')
