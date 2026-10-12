@@ -440,6 +440,20 @@ class Consumer(object):
             task.__trace__ = build_tracer(name, task, loader, self.hostname,
                                           app=self.app)
 
+    def strategy_for_new_task(self, name):
+        """Start the strategy of a task registered after the worker started.
+
+        Looking ``name`` up in the app's task registry lets a registry that
+        imports task modules on demand register it now.  Raises
+        :exc:`KeyError` if the task is still unknown.
+
+        """
+        task = self.app.tasks[name]
+        self.strategies[name] = task.start_strategy(self.app, self)
+        task.__trace__ = build_tracer(name, task, self.app.loader,
+                                      self.hostname, app=self.app)
+        return self.strategies[name]
+
     def create_task_handler(self):
         strategies = self.strategies
         on_unknown_message = self.on_unknown_message
@@ -462,10 +476,14 @@ class Consumer(object):
                     self.app, type_, body, message, headers)
 
             try:
-                strategies[type_](message, body,
-                                  message.ack_log_error,
-                                  message.reject_log_error,
-                                  callbacks)
+                try:
+                    strategy = strategies[type_]
+                except KeyError:
+                    strategy = self.strategy_for_new_task(type_)
+                strategy(message, body,
+                         message.ack_log_error,
+                         message.reject_log_error,
+                         callbacks)
             except KeyError as exc:
                 on_unknown_task(body, message, exc)
             except InvalidTaskError as exc:

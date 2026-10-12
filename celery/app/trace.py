@@ -346,7 +346,14 @@ trace_task_ret = _trace_task_ret
 def _fast_trace_task(task, uuid, args, kwargs, request={}):
     # setup_worker_optimizations will point trace_task_ret to here,
     # so this is the function used in the worker.
-    return _tasks[task].__trace__(uuid, args, kwargs, request)[0]
+    task_obj = _tasks[task]
+    if task_obj.__trace__ is None:
+        # registered after the pool forked, so the parent's
+        # update_strategies never built its tracer in this process
+        task_obj.__trace__ = build_tracer(
+            task, task_obj, task_obj.app.loader, app=task_obj.app,
+        )
+    return task_obj.__trace__(uuid, args, kwargs, request)[0]
 
 
 def eager_trace_task(task, uuid, args, kwargs, request=None, **opts):

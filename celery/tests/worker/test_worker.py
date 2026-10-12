@@ -293,6 +293,40 @@ class test_Consumer(AppCase):
         self.assertEqual(in_bucket.execute(), 2 * 4 * 8)
         self.assertTrue(self.timer.empty())
 
+    def test_receive_message_task_registered_after_start(self):
+        l = Consumer(self.buffer.put, timer=self.timer, app=self.app)
+        l.blueprint.state = RUN
+        l.event_dispatcher = mock_event_dispatcher()
+        l.update_strategies()
+
+        @self.app.task(shared=False)
+        def late_task(x):
+            return x * 2
+
+        m = create_message(Mock(), task=late_task.name, args=[21], kwargs={})
+        callback = self._get_on_message(l)
+        callback(m.decode(), m)
+
+        in_bucket = self.buffer.get_nowait()
+        self.assertEqual(in_bucket.name, late_task.name)
+        self.assertEqual(in_bucket.execute(), 42)
+        self.assertIn(late_task.name, l.strategies)
+
+    @patch('celery.worker.consumer.error')
+    def test_receive_message_task_never_registered(self, error):
+        l = Consumer(self.buffer.put, timer=self.timer, app=self.app)
+        l.blueprint.state = RUN
+        l.event_dispatcher = mock_event_dispatcher()
+        l.update_strategies()
+        m = create_message(Mock(), task='no.such.task', args=[], kwargs={})
+        m.reject_log_error = Mock()
+
+        callback = self._get_on_message(l)
+        callback(m.decode(), m)
+
+        self.assertIn('unregistered task', error.call_args[0][0])
+        self.assertTrue(m.reject_log_error.called)
+
     def test_start_channel_error(self):
 
         class MockConsumer(Consumer):
