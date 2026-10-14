@@ -685,6 +685,24 @@ class test_Request(AppCase):
         )
         self.assertEqual(res, 4 ** 4)
 
+    def test_fast_trace_task_builds_missing_tracer(self):
+        from celery.app import trace
+        setup_worker_optimizations(self.app)
+        try:
+            self.mytask.__trace__ = None
+            with patch('celery.app.trace.build_tracer',
+                       wraps=build_tracer) as tracer:
+                res = trace.trace_task_ret(
+                    self.mytask.name, uuid(), [4], {},
+                    {'hostname': 'worker@host'},
+                )
+            self.assertEqual(res, 4 ** 4)
+            self.assertIsNotNone(self.mytask.__trace__)
+            self.assertEqual(tracer.call_args[0][3], 'worker@host')
+        finally:
+            reset_worker_optimizations()
+            delattr(self.mytask, '__trace__')
+
     def test_trace_task_ret(self):
         self.mytask.__trace__ = build_tracer(
             self.mytask.name, self.mytask, self.app.loader, 'test',
